@@ -462,7 +462,6 @@ public:
         return make_directory(_dirpath.string()).then([this] {
             auto testfile = _dirpath / fs::path("testfile");
             file_open_options options;
-            options.extent_allocation_size_hint = _file_size;
             return open_file_dma(testfile.string(), open_flags::rw | open_flags::create, std::move(options)).then([this, testfile] (file file) {
                 _file = file;
                 if (this_shard_id() == 0) {
@@ -472,7 +471,9 @@ public:
                     return remove_file(_dirpath.string());
                 });
             }).then([this] {
-                return _file.truncate(_file_size);
+                return _file.truncate(_file_size).then([this] {
+                    return _file.allocate(0, _file_size);
+                });
             });
         });
     }
